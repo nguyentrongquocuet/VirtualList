@@ -33,41 +33,49 @@ const createAsyncThrottle = <F extends () => Promise<any>>(f: F): F => {
   return ofn as F;
 };
 
-let index = 1001;
+let index = 8;
 
-const defaultState = getNumList(1000).map((v) => v.toString());
+const defaultState = getNumList(8).map((v) => v.toString());
 
 const Test = () => {
   const [state, setState] = React.useState<string[]>(defaultState);
 
-  const fetchMore = React.useMemo(() => createAsyncThrottle(() => new Promise((res) => {
-    window.setTimeout(() => {
-      console.log('fetchMore');
-      setState((old) => [...old, `${index++}`]);
-      res(undefined);
-    }, 300);
-  })), []);
+  const fetchMore = React.useMemo(
+    () => createAsyncThrottle(
+      () => new Promise((res) => {
+        window.setTimeout(() => {
+          console.log('fetchMore');
+          setState((old) => [...old, `${index++}`]);
+          res(undefined);
+        }, 300);
+      }),
+    ),
+    [],
+  );
 
-  const { ref, disable } = useScroll<HTMLDivElement>(fetchMore);
+  const { ref, disable } = useScroll<HTMLDivElement>(90, fetchMore);
 
-  const finalItems = useVirtual({ itemHeight: 50, items: state, ref, windowSize: 10 });
+  const finalItems = useVirtual({
+    itemHeight: 33,
+    items: state,
+    ref,
+    windowSize: 10,
+  });
 
   React.useEffect(() => {
-    if (state.length < 10000) return;
+    if (state.length < Number.MAX_SAFE_INTEGER) return;
 
     disable();
   }, [state, disable]);
 
   return (
-    <div style={{ height: '500px', overflowY: 'scroll' }} ref={ref}>
+    <div style={{ height: '206px', overflowY: 'scroll' }} ref={ref}>
       <div className="placeholder" />
-      {
-        finalItems.map((v) => (
-          <div key={v} style={{ height: '50px' }} className="item">
-            {v}
-          </div>
-        ))
-        }
+      {finalItems.map((v) => (
+        <div key={v} style={{ height: '33px' }} className="item">
+          {v}
+        </div>
+      ))}
     </div>
   );
 };
