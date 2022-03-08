@@ -1,0 +1,60 @@
+{
+  "name": "scrollist",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "jest --watch",
+    "lint": "npx eslint src",
+    "lint:fix": "npx eslint --fix lib",
+    "prepare": "husky install"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.17.5",
+    "@babel/preset-env": "^7.16.11",
+    "@babel/preset-typescript": "^7.16.7",
+    "@commitlint/cli": "^16.2.1",
+    "@commitlint/config-conventional": "^16.2.1",
+    "@redux-devtools/extension": "^3.2.2",
+    "@types/antd": "^1.0.0",
+    "@types/jest": "^27.4.1",
+    "@types/node": "^17.0.21",
+    "@types/react": "^17.0.39",
+    "@types/react-dom": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.12.1",
+    "@typescript-eslint/parser": "^5.12.1",
+    "@vitejs/plugin-react": "^1.2.0",
+    "babel-plugin-module-resolver": "^4.1.0",
+    "eslint": "^8.10.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^16.1.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-import-resolver-typescript": "^2.5.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-prettier": "^4.0.0",
+    "husky": "^7.0.4",
+    "jest": "^27.5.1",
+    "lint-staged": "^12.3.4",
+    "prettier": "^2.5.1",
+    "sass": "^1.49.9",
+    "typescript": "^4.5.5",
+    "vite": "^2.8.4"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^1.8.0",
+    "antd": "^4.18.9",
+    "nanoid": "^3.3.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-redux": "^7.2.6",
+    "redux": "^4.1.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": "npx eslint lib"
+  }
+}

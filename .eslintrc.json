@@ -1,0 +1,49 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "prettier",
+    "airbnb",
+    "airbnb-typescript",
+    "airbnb/hooks"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": 12,
+    "sourceType": "module"
+  },
+  "rules": {
+    "import/extensions": "off",
+    "import/prefer-default-export": "off",
+    "react/function-component-definition": ["error", {
+      "namedComponents": ["arrow-function"],
+      "unNamedComponents": ["arrow-function"]
+    }],
+    "react/jsx-props-no-spreading": "off",
+    "quotes": ["error", "single"],
+    "object-curly-newline": ["error", {
+        "ObjectExpression": { "multiline": true, "minProperties": 5 },
+        "ObjectPattern": { "multiline": true, "minProperties": 5 },
+        "ImportDeclaration": { "multiline": true, "minProperties": 5 },
+        "ExportDeclaration": { "multiline": true, "minProperties": 5 }
+    }],
+    "semi": "error"
+  },
+  "plugins": ["prettier"],
+  "settings": {
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
+    },
+    "import/resolver": {
+      "typescript": {
+        "project": "./tsconfig.json"
+      }
+    }
+  }
+}
