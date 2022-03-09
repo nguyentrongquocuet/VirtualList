@@ -10,6 +10,8 @@ const getCoordinate = (e: HTMLElement) => {
   };
 };
 
+const sum = (nums: number[]) => nums.reduce((s, n) => s + n, 0);
+
 const divideToPercent = (amount: number, total: number) => (amount * 100) / total;
 
 const isLowerOrEqual = (a: number, b: number) => a - b <= 0;
@@ -19,7 +21,10 @@ const isLowerOrEqual = (a: number, b: number) => a - b <= 0;
  * when a DOM scrollable container reached the threshold
  * - `ref` will take advantage over `setRef`
  */
-const useScroll = <T extends HTMLElement>(threshold = 90, callback: Function = () => {}) => {
+const useScroll = <T extends HTMLElement>(
+  threshold = 90,
+  callback: Function = () => {},
+) => {
   const ref = React.useRef<T | null>(null);
   const disabled = React.useRef(false);
 
@@ -28,12 +33,16 @@ const useScroll = <T extends HTMLElement>(threshold = 90, callback: Function = (
   /**
    * Disable calling the callback
    */
-  const disable = React.useCallback(() => { disabled.current = true; }, []);
+  const disable = React.useCallback(() => {
+    disabled.current = true;
+  }, []);
 
   /**
    * Enable calling the callback
    */
-  const enable = React.useCallback(() => { disabled.current = false; }, []);
+  const enable = React.useCallback(() => {
+    disabled.current = false;
+  }, []);
 
   const setRef: React.RefCallback<T> = React.useCallback((el: T) => {
     ref.current = el;
@@ -79,10 +88,6 @@ const useScroll = <T extends HTMLElement>(threshold = 90, callback: Function = (
   };
 };
 
-const applyStyle = (el: HTMLElement, style: Partial<HTMLElement['style']>) => {
-  Object.assign(el.style, style);
-};
-
 const placeholderStyle = {
   position: 'absolute',
   top: '0',
@@ -95,6 +100,20 @@ const itemStyle = {
   left: '0px',
 };
 
+type TWeirdHeight = {
+  index: number;
+  height: number;
+};
+type TWeirdVal = {
+  val: number;
+  index: number;
+};
+
+type TSumAtIndex = {
+  index: number;
+  sum: number;
+};
+
 type TUseVirtualConfig<T> = {
   itemHeight: number;
   items: T[];
@@ -102,10 +121,115 @@ type TUseVirtualConfig<T> = {
   windowSize?: number;
   itemSelector?: string;
   placeholderSelector?: string;
+  weirdHeight?: TWeirdHeight[];
 };
 
 /**
- * Very ligth script that helps improving better scrolling exprience on large list of data
+ * Calculate sum of numbers from index 0 to the weird-position(including itself)
+ * - weird-position: the position that have different val
+ */
+const sumAtWeirdValsWithCache = (
+  commonVal: number,
+  weirdVals: TWeirdVal[] = [],
+): TSumAtIndex[] => {
+  let prev: TSumAtIndex | null = null;
+
+  return weirdVals.map(({ index, val }) => {
+    if (!prev) {
+      const sum = index * commonVal + val;
+      prev = { sum, index };
+      return { ...prev };
+    }
+
+    const sum = prev.sum + (index - prev.index - 1) * commonVal + val;
+
+    prev = { sum, index };
+
+    return {
+      sum,
+      index,
+    };
+  });
+};
+
+const findIndex = (
+  amount: number,
+  commonVal: number,
+  weirdVals: TWeirdVal[] = [],
+) => {
+  const sumAtWeirdVals = sumAtWeirdValsWithCache(commonVal, weirdVals);
+
+  const closestWeirdSumIndex = sumAtWeirdVals.findIndex(
+    (item) => item.sum > amount,
+  );
+
+  if (closestWeirdSumIndex >= 0) {
+    const closestLower = sumAtWeirdVals[closestWeirdSumIndex - 1];
+    if (!closestLower) {
+      return Math.ceil(amount / commonVal);
+    }
+
+    console.log(closestLower, amount);
+    return Math.ceil(
+      (amount - closestLower.sum) / commonVal + closestLower.index,
+    );
+  }
+
+  return Math.ceil(amount / commonVal);
+};
+
+// eslint-disable-next-line max-len
+const getTotalAmount = (
+  size: number,
+  commonAmount: number,
+  weirdAmounts: number[] = [],
+) => (size - weirdAmounts.length) * commonAmount + sum(weirdAmounts);
+
+const getIndex = (
+  amount: number,
+  commonAmount: number,
+  weirdAmounts: TWeirdHeight[],
+) => {
+  if (!weirdAmounts.length) {
+    return Math.floor(amount / commonAmount);
+  }
+
+  const firstIndex = findIndex(
+    amount,
+    commonAmount,
+    weirdAmounts.map((v) => ({ val: v.height, index: v.index })),
+  );
+
+  console.log({ firstIndex });
+
+  return firstIndex === 0 ? 0 : firstIndex - 1;
+};
+
+const getTotalAmountUpToIndex = (index: number, commonVal: number, sumAtWeirdVals: TSumAtIndex[]) => {
+  const closestGreaterIndex = sumAtWeirdVals.findIndex(({ sum }) => sum > index);
+  if (closestGreaterIndex >= 0) {
+    const closestLower = sumAtWeirdVals[closestGreaterIndex - 1];
+
+    if (!closestLower) {
+      return commonVal * index;
+    }
+
+    return closestLower.sum + (index - closestLower.index) * commonVal;
+  }
+
+  return commonVal * index;
+};
+
+type TCSS = Partial<CSSStyleDeclaration> & any;
+
+type TWrapper<T> = {
+  data: T;
+  index: number;
+  style: TCSS;
+};
+
+/**
+ * Very light script that helps improving better scrolling exprience on large list of data
  * @param {TUseVirtualConfig} config Option passed to this hook
  * - `config.itemHeight`: height of one item in pixel
  * - `config.items`: list of item's data
@@ -119,13 +243,31 @@ type TUseVirtualConfig<T> = {
  */
 const useVirtual = <T>(config: TUseVirtualConfig<T>) => {
   const {
-    ref, items, itemHeight, itemSelector = '.item', placeholderSelector = '.placeholder', windowSize = 7,
+    ref,
+    items,
+    itemHeight,
+    itemSelector = '.item',
+    placeholderSelector = '.placeholder',
+    windowSize = 7,
+    weirdHeight,
   } = config;
 
-  const [finalItems, setFinalItems] = React.useState<T[]>(() => items.slice(0, windowSize));
+  const [finalItems, setFinalItems] = React.useState<TWrapper<T>[]>(
+    () => items.slice(0, windowSize).map(
+      (v, i) => ({ data: v, index: i, style: {} }),
+    ),
+  );
+
+  const [wrapperStyle, setWrapperStyle] = React.useState<TCSS>(placeholderStyle);
 
   React.useEffect(() => {
     const { current: containerEl } = ref;
+
+    const wh = weirdHeight || [];
+
+    const getFromWh = (index: number, wH: TWeirdHeight[]) => wH.find(
+      (item) => item.index === index,
+    );
 
     const calculateThenApplyStyle = () => {
       if (!containerEl) return;
@@ -137,39 +279,59 @@ const useVirtual = <T>(config: TUseVirtualConfig<T>) => {
       /**
        * Recalculate the total height in case items's length changed
        */
-      const totalHeight = items.length * itemHeight;
+
+      const totalHeight = getTotalAmount(
+        items.length,
+        itemHeight,
+        wh.map((w) => w.height),
+      );
+
+      console.log(totalHeight);
 
       const { scrollTop } = getCoordinate(containerEl);
 
-      const placeholderEl = containerEl.querySelector(placeholderSelector) as HTMLElement;
+      const placeholderEl = containerEl.querySelector(
+        placeholderSelector,
+      ) as HTMLElement;
 
       if (!placeholderEl) return;
 
       /**
        * Index of the first item that have a piece of visible space
        */
-      const firstIndex = Math.floor(scrollTop / itemHeight);
-      // const firstIndexTop = scrollTop - firstIndex * itemHeight;
+      const firstIndex = getIndex(scrollTop, itemHeight, wh);
 
-      setFinalItems(items.slice(firstIndex, firstIndex + windowSize));
-
-      applyStyle(placeholderEl, {
+      setWrapperStyle({
         height: `${totalHeight}px`,
         ...placeholderStyle,
       });
 
-      const itemEls = containerEl.querySelectorAll(itemSelector) as NodeListOf<HTMLElement>;
+      const sm = sumAtWeirdValsWithCache(itemHeight, wh.map(
+        (v) => ({ index: v.index, val: v.height }),
+      ));
 
-      /**
-       * Item at index `i` of `items` will be `i * itemHeight`px far the top of the container
-       */
-      itemEls.forEach((item, index) => {
-        applyStyle(item, {
-          ...itemStyle,
-          height: `${itemHeight}px`,
-          top: `${(firstIndex + index) * itemHeight}px`,
-        });
-      });
+      let nextTop = getTotalAmountUpToIndex(firstIndex, itemHeight, sm);
+
+      const mapItem = (item: T, index: number): TWrapper<T> => {
+        const realIndex = index + firstIndex;
+        const height = getFromWh(realIndex, wh)?.height || itemHeight;
+        const top = nextTop;
+        nextTop = top + height;
+
+        return {
+          index: realIndex,
+          data: item,
+          style: {
+            ...itemStyle,
+            height: `${height}px`,
+            top: `${top}px`,
+          },
+        };
+      };
+
+      setFinalItems(
+        items.slice(firstIndex, firstIndex + windowSize).map(mapItem),
+      );
     };
 
     calculateThenApplyStyle();
@@ -179,9 +341,20 @@ const useVirtual = <T>(config: TUseVirtualConfig<T>) => {
     return () => {
       containerEl?.removeEventListener('scroll', calculateThenApplyStyle);
     };
-  }, [items, itemHeight, ref, placeholderSelector, itemSelector, windowSize]);
+  }, [
+    items,
+    itemHeight,
+    ref,
+    placeholderSelector,
+    itemSelector,
+    windowSize,
+    weirdHeight,
+  ]);
 
-  return finalItems;
+  return {
+    finalItems,
+    wrapperStyle,
+  };
 };
 
 export { useScroll, useVirtual };
